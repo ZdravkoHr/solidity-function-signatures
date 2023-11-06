@@ -29,12 +29,13 @@ const resultsTable: ResultsTable = {};
 
 async function getSignatures(pathToDir: string) {
   const pathSegments = pathToDir.split('/');
-  const constructedPath = path.resolve(...pathSegments);
-  const files = await fs.readdir(constructedPath);
+  const scopeFile = path.resolve(...pathSegments, 'scope.txt');
+  const files = (await fs.readFile(scopeFile)).toString().split('\n');
 
-  files.forEach(async (fileName: string) => {
+  files.forEach(async (filePath: string) => {
+    const filePathSegments = filePath.trim().split('/');
     const contents = (
-      await fs.readFile(path.join(constructedPath, fileName))
+      await fs.readFile(path.join(...pathSegments, ...filePathSegments))
     ).toString();
     const functions = contents.match(globalFunctionRegex);
     if (!functions) return;
@@ -69,6 +70,7 @@ async function getSignatures(pathToDir: string) {
 
       const functionSig = functionName + functionParams;
       const hash = '0x' + keccak256(functionSig).toString('hex').slice(0, 8);
+      const fileName = filePathSegments[filePathSegments.length - 1];
       
       const functionLocation = fileName.slice(0, -3) + matchResult[1] + matchResult[2];
 
