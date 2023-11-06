@@ -1,0 +1,23 @@
+{
+  "name": "getsignatures",
+  "version": "1.0.0",
+  "description": "Script for extracting solidity functions signatures",
+  "main": "index.js",
+  "scripts": {
+    "getSignatures": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "Solidity",
+    "function",
+    "selector"
+  ],
+  "author": "ZdravkoHr.",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "keccak256": "^1.0.6",
+    "ts-node": "^10.9.1"
+  }
+}
