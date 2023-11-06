@@ -4,8 +4,8 @@ const keccak256 = require('keccak256');
 
 type Visibility = 'public' | 'external' | 'private' | 'internal';
 type ResultsTable = {
-    [key: string]: string[],
-}
+  [key: string]: string[];
+};
 
 const pathToDir = process.argv[2];
 const visibilityConfigs = process.argv.slice(3);
@@ -32,22 +32,22 @@ async function getSignatures(pathToDir: string) {
   const scopeFile = path.resolve(...pathSegments, 'scope.txt');
   const files = (await fs.readFile(scopeFile)).toString().split('\n');
 
-  files.forEach(async (filePath: string) => {
+  for (const filePath of files) {
     const filePathSegments = filePath.trim().split('/');
     const contents = (
       await fs.readFile(path.join(...pathSegments, ...filePathSegments))
     ).toString();
     const functions = contents.match(globalFunctionRegex);
-    if (!functions) return;
+    if (!functions) continue;
 
-    functions.forEach((fn: string) => {
+    for (const fn of functions) {
       const matchResult = fn.match(functionRegex);
-      if (!matchResult) return;
+      if (!matchResult) continue;
 
       const functionName = matchResult[1];
       const visibility = matchResult[3] as Visibility;
 
-      if (skipForVisibility(visibility)) return;
+      if (skipForVisibility(visibility)) continue;
 
       // remove new lines and spaces before and after the parameters list
       let functionParams = matchResult[2]
@@ -59,7 +59,7 @@ async function getSignatures(pathToDir: string) {
       // remove parameters names and all spaces in-between
       functionParams = functionParams
         .split(',')
-        .map((param) => param.trim().split(/\s+/)[0])
+        .map((param: string) => param.trim().split(/\s+/)[0])
         .join(',');
       // add ")" if cut earlier
       functionParams =
@@ -67,18 +67,28 @@ async function getSignatures(pathToDir: string) {
           ? functionParams
           : functionParams + ')';
 
-
       const functionSig = functionName + functionParams;
       const hash = '0x' + keccak256(functionSig).toString('hex').slice(0, 8);
       const fileName = filePathSegments[filePathSegments.length - 1];
-      
-      const functionLocation = fileName.slice(0, -3) + matchResult[1] + matchResult[2];
 
-      resultsTable[hash] =  [...(resultsTable[hash] || []), functionLocation];
-    });
+      const functionLocation =
+        fileName.slice(0, -3) + matchResult[1] + matchResult[2];
 
-    console.log(resultsTable);
+      resultsTable[hash] = [...(resultsTable[hash] || []), functionLocation];
+    }
+  }
+
+  let textResult = '';
+
+  Object.entries(resultsTable).forEach(([sig, fns]) => {
+    const fnsList = fns.map((fn, i) => `   - ${fn}`).join('\n');
+    textResult += `- ${sig}: \n ${fnsList}\n`;
   });
+
+  await fs.writeFile(
+    path.resolve(...pathSegments, 'functionSignatures.md'),
+    textResult
+  );
 }
 
 function handleVisibilityConfig() {
@@ -87,7 +97,6 @@ function handleVisibilityConfig() {
   includedVisibilities.add('external');
 
   visibilityConfigs.forEach((visibility) => {
-   
     switch (visibility) {
       case VISIBILITY_CONFIG_PRIVATE_ONLY:
         includedVisibilities.clear();
@@ -127,12 +136,11 @@ function handleVisibilityConfig() {
     }
   });
 
-
   return includedVisibilities;
 }
 
 function skipForVisibility(visibility: Visibility) {
-    return !configuredVisibility.has(visibility);
+  return !configuredVisibility.has(visibility);
 }
 
 getSignatures(pathToDir);
